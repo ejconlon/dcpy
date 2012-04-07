@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# A simple disassembler for DCPU-16 programs.
+# TODO - finish to spec
+
 make_lookup = lambda d: dict((i, d[i]) for i in xrange(len(d)))
 
 OPCODES = "NON SET ADD SUB MUL DIV MOD SHL SHR AND BOR XOR IFE IFN IFG IFB".split(" ")
@@ -10,18 +13,11 @@ NONOPCODES = "RES JSR".split(" ")
 
 NONOPLOOKUP = make_lookup(NONOPCODES)
 
-CYCLES = {
-    1: "SET AND BOR XOR".split(" "),
-    2: "ADD SUB MUL SHR SHL IFE IFN IFG IFB".split(" "),
-    3: "DIV MOD".split(" ")
-}
-
 REGISTERS = "A B C X Y Z I J".split(" ")
-
-HAS_ONE_ARG = set(["JSR"])
 
 REGLOOKUP = make_lookup(REGISTERS)
 
+# A test table of [(instruction, expected output)]
 decomp_cases = [
     [[0x7c01, 0x0030], "SET A, 0x30"],
     [[0x7de1, 0x1000, 0x0020], "SET [0x1000], 0x20"],
@@ -40,6 +36,7 @@ decomp_cases = [
     [[0x61c1], "SET PC, POP"]
 ]
 
+# Pretty-format the list of instruction parts
 def clean(parts):
     cleaned = []
     for part in parts:
@@ -55,15 +52,19 @@ def clean(parts):
             cleaned.append("0x%x" % part[1])
     return cleaned
 
+# Join all of the instruction parts into a pretty string
 def djoin(parts):
     parts = list(parts)
     return " ".join([parts[0][1], ", ".join(clean(parts[1:]))])
 
+# A Parser parses one instruction (for now)
 class Parser(object):
     def __init__(self, inst):
         self.inst = inst
         self.word = 0
 
+    # lookup involves some state change (advancing word index).
+    # returns pair of (token type, token value)
     def lookup_value(self, val):
         if 0x0 <= val <= 0x7:
             return ("regname", REGLOOKUP[val])
@@ -87,6 +88,7 @@ class Parser(object):
         else:
             raise Exception("NI: 0x%x" % val)
     
+    # yields all the typed tokens of a single instruction
     def parse(self):
         op = OPLOOKUP[0x000f & self.inst[0]]
         skip = False
@@ -102,13 +104,16 @@ class Parser(object):
         print "%x" % val2
         yield self.lookup_value(val2)
 
+# ignore me
 def log(x):
     print x
     return x
 
+# return a pretty string decomposition of the given program instruction
 def decomp_inst(inst):
     return djoin(log(i) for i in Parser(inst).parse())
 
+# run our test cases
 def test_decomp():
     for case in decomp_cases:
         inst, res = case
@@ -116,8 +121,5 @@ def test_decomp():
         print case, decomp
         assert res == decomp
 
-def main():
-    test_decomp()
-
 if __name__ == "__main__":
-    main()
+    test_decomp()
