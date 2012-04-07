@@ -34,10 +34,14 @@ decomp_cases = [
 def clean(parts):
     cleaned = []
     for part in parts:
-        if type(part[1]) == str:
+        if part[0] == "regname" or part[0] == "pcname":
             cleaned.append(part[1])
         elif part[0] == "address":
             cleaned.append("[0x%x]" % part[1])
+        elif part[0] == "lit+reg":
+            cleaned.append("[0x%x+%s]" % part[1])
+        elif part[0] == "regval":
+            cleaned.append("[%s]" % part[1])
         else:
             cleaned.append("0x%x" % part[1])
     return cleaned
@@ -52,8 +56,13 @@ class Parser(object):
         self.word = 0
 
     def lookup_value(self, val):
-        if val in REGLOOKUP:
+        if 0x0 <= val <= 0x7:
             return ("regname", REGLOOKUP[val])
+        elif 0x08 <= val <= 0x0f:
+            return ("regval", REGLOOKUP[val - 0x08])
+        elif 0x10 <= val <= 0x17:
+            self.word += 1
+            return ("lit+reg", (self.inst[self.word], REGLOOKUP[val - 0x10]))
         elif val == 0x1c:
             return ("pcname", "PC")
         elif val == 0x1f:
