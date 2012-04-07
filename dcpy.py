@@ -22,7 +22,12 @@ REGLOOKUP = make_lookup(REGISTERS)
 
 decomp_cases = [
     [[0x7c01, 0x0030], "SET A, 0x30"],
-    [[0x7de1, 0x1000, 0x0020], "SET [0x1000], 0x20"]
+    [[0x7de1, 0x1000, 0x0020], "SET [0x1000], 0x20"],
+    [[0x7803, 0x1000], "SUB A, [0x1000]"],
+    [[0xc00d], "IFN A, 0x10"],
+    [[0x7dc1, 0x001a], "SET PC, 0x1a"],
+    [[0xa861], "SET I, 0xa"],
+    [[0x7c01, 0x2000], "SET A, 0x2000"]
 ]
 
 def clean(parts):
@@ -48,14 +53,18 @@ class Parser(object):
     def lookup_value(self, val):
         if val in REGLOOKUP:
             return ("regname", REGLOOKUP[val])
+        elif val == 0x1c:
+            return ("pcname", "PC")
         elif val == 0x1f:
             self.word += 1
             return ("literal", self.inst[self.word])
         elif val == 0x1e:
             self.word += 1
             return ("address", self.inst[self.word])
+        elif 0x20 <= val <= 0x3f:
+            return ("literal", val - 0x20);
         else:
-            raise Exception("NI")
+            raise Exception("NI: 0x%x" % val)
     
     def parse(self):
         op = OPLOOKUP[0x000f & self.inst[0]]
@@ -67,8 +76,12 @@ class Parser(object):
         print "%x" % val2
         yield self.lookup_value(val2)
 
+def log(x):
+    print x
+    return x
+
 def decomp_inst(inst):
-    return djoin(i for i in Parser(inst).parse())
+    return djoin(log(i) for i in Parser(inst).parse())
 
 def test_decomp():
     for case in decomp_cases:
