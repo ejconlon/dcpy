@@ -18,6 +18,8 @@ CYCLES = {
 
 REGISTERS = "A B C X Y Z I J".split(" ")
 
+HAS_ONE_ARG = set(["JSR"])
+
 REGLOOKUP = make_lookup(REGISTERS)
 
 decomp_cases = [
@@ -28,13 +30,20 @@ decomp_cases = [
     [[0x7dc1, 0x001a], "SET PC, 0x1a"],
     [[0xa861], "SET I, 0xa"],
     [[0x7c01, 0x2000], "SET A, 0x2000"],
-    [[0x2161, 0x2000], "SET [0x2000+I], [A]"]
+    [[0x2161, 0x2000], "SET [0x2000+I], [A]"],
+    [[0x8463], "SUB I, 0x1"],
+    [[0x806d], "IFN I, 0x0"],
+    [[0x7dc1, 0x000d], "SET PC, 0xd"],
+    [[0x9031], "SET X, 0x4"],
+    [[0x7c10, 0x0018], "JSR 0x18"],
+    [[0x9037], "SHL X, 0x4"],
+    [[0x61c1], "SET PC, POP"]
 ]
 
 def clean(parts):
     cleaned = []
     for part in parts:
-        if part[0] == "regname" or part[0] == "pcname":
+        if part[0] in set(["regname", "popname", "pcname"]):
             cleaned.append(part[1])
         elif part[0] == "address":
             cleaned.append("[0x%x]" % part[1])
@@ -63,6 +72,8 @@ class Parser(object):
         elif 0x10 <= val <= 0x17:
             self.word += 1
             return ("lit+reg", (self.inst[self.word], REGLOOKUP[val - 0x10]))
+        elif val == 0x18:
+            return ("popname", "POP")
         elif val == 0x1c:
             return ("pcname", "PC")
         elif val == 0x1f:
@@ -78,10 +89,15 @@ class Parser(object):
     
     def parse(self):
         op = OPLOOKUP[0x000f & self.inst[0]]
+        skip = False
+        if op == "NON":
+            skip = True
+            op = NONOPLOOKUP[(0x03f0 & self.inst[0]) >> 4]
         yield ("op", op)
-        val = (0x03f0 & self.inst[0]) >> 4
-        print "%x" % val
-        yield self.lookup_value(val)
+        if not skip:             
+            val = (0x03f0 & self.inst[0]) >> 4
+            print "%x" % val
+            yield self.lookup_value(val)
         val2 = (0xfc00 & self.inst[0]) >> 10
         print "%x" % val2
         yield self.lookup_value(val2)
