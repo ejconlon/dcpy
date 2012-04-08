@@ -33,14 +33,30 @@ decomp_cases = [
     [[0x9031], "SET X, 0x4"],
     [[0x7c10, 0x0018], "JSR 0x18"],
     [[0x9037], "SHL X, 0x4"],
-    [[0x61c1], "SET PC, POP"]
+    [[0x61c1], "SET PC, POP"],
+    [[0x0401], "SET A, B"],
+    [[0x0c21], "SET C, X"],
+    [[0x1441], "SET Y, Z"],
+    [[0x1c61], "SET I, J"],
+    [[0x0cb1], "SET [X], X"],
+    [[0x0d31, 0x002a], "SET [0x2a+X], X"],
+    [[0x6181], "SET POP, POP"],
+    [[0x6591], "SET PEEK, PEEK"],
+    [[0x69a1], "SET PUSH, PUSH"],
+    [[0x6db1], "SET SP, SP"],
+    [[0x71c1], "SET PC, PC"],
+    [[0x75d1], "SET O, O"],
+    [[0xfc01], "SET A, 0x1f"],
+    [[0x7df1, 0xffff, 0x0020], "SET 0xffff, 0x20"],
+    [[0x0010], "JSR A"],
+    [[0x7c10, 0x0020], "JSR 0x20"]
 ]
 
 # Pretty-format the list of instruction parts
 def clean(parts):
     cleaned = []
     for part in parts:
-        if part[0] in set(["regname", "popname", "pcname"]):
+        if part[0] in set(["regname", "popname", "pcname", "peekname", "pushname", "spname", "oname"]):
             cleaned.append(part[1])
         elif part[0] == "address":
             cleaned.append("[0x%x]" % part[1])
@@ -48,6 +64,8 @@ def clean(parts):
             cleaned.append("[0x%x+%s]" % part[1])
         elif part[0] == "regval":
             cleaned.append("[%s]" % part[1])
+        elif part[0] == "newline":
+            pass
         else:
             cleaned.append("0x%x" % part[1])
     return cleaned
@@ -75,34 +93,46 @@ class Parser(object):
             return ("lit+reg", (self.inst[self.word], REGLOOKUP[val - 0x10]))
         elif val == 0x18:
             return ("popname", "POP")
+        elif val == 0x19:
+            return ("peekname", "PEEK")
+        elif val == 0x1a:
+            return ("pushname", "PUSH")
+        elif val == 0x1b:
+            return ("spname", "SP")
         elif val == 0x1c:
             return ("pcname", "PC")
-        elif val == 0x1f:
-            self.word += 1
-            return ("literal", self.inst[self.word])
+        elif val == 0x1d:
+            return ("oname", "O")
         elif val == 0x1e:
             self.word += 1
             return ("address", self.inst[self.word])
+        elif val == 0x1f:
+            self.word += 1
+            return ("literal", self.inst[self.word])
         elif 0x20 <= val <= 0x3f:
             return ("literal", val - 0x20);
         else:
             raise Exception("NI: 0x%x" % val)
     
-    # yields all the typed tokens of a single instruction
+    # yields all the typed tokens of a stream of instructions
     def parse(self):
-        op = OPLOOKUP[0x000f & self.inst[0]]
-        skip = False
-        if op == "NON":
-            skip = True
-            op = NONOPLOOKUP[(0x03f0 & self.inst[0]) >> 4]
-        yield ("op", op)
-        if not skip:             
-            val = (0x03f0 & self.inst[0]) >> 4
-            print "%x" % val
-            yield self.lookup_value(val)
-        val2 = (0xfc00 & self.inst[0]) >> 10
-        print "%x" % val2
-        yield self.lookup_value(val2)
+        while self.word < len(self.inst):
+            first_inst = self.inst[self.word]
+            op = OPLOOKUP[0x000f & first_inst]
+            skip = False
+            if op == "NON":
+                skip = True
+                op = NONOPLOOKUP[(0x03f0 & first_inst) >> 4]
+            yield ("op", op)
+            if not skip:             
+                val = (0x03f0 & first_inst) >> 4
+                print "%x" % val
+                yield self.lookup_value(val)
+            val2 = (0xfc00 & first_inst) >> 10
+            print "%x" % val2
+            yield self.lookup_value(val2)
+            yield ("newline", "\n")
+            self.word += 1
 
 # ignore me
 def log(x):
