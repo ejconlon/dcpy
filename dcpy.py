@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # A simple disassembler for DCPU-16 programs.
-# TODO - finish to spec
 
 make_lookup = lambda d: dict((i, d[i]) for i in xrange(len(d)))
 
@@ -49,33 +48,43 @@ decomp_cases = [
     [[0xfc01], "SET A, 0x1f"],
     [[0x7df1, 0xffff, 0x0020], "SET 0xffff, 0x20"],
     [[0x0010], "JSR A"],
-    [[0x7c10, 0x0020], "JSR 0x20"]
+    [[0x7c10, 0x0020], "JSR 0x20"],
+    [[0x0010, 0x0010], "JSR A\nJSR A"]
 ]
 
 # Pretty-format the list of instruction parts
-def clean(parts):
-    cleaned = []
-    for part in parts:
-        if part[0] in set(["regname", "popname", "pcname", "peekname", "pushname", "spname", "oname"]):
-            cleaned.append(part[1])
-        elif part[0] == "address":
-            cleaned.append("[0x%x]" % part[1])
-        elif part[0] == "lit+reg":
-            cleaned.append("[0x%x+%s]" % part[1])
-        elif part[0] == "regval":
-            cleaned.append("[%s]" % part[1])
-        elif part[0] == "newline":
-            pass
-        else:
-            cleaned.append("0x%x" % part[1])
-    return cleaned
+def pretty(part):
+    if part[0] in set(["regname", "popname", "pcname", "peekname", "pushname", "spname", "oname", "op"]):
+        return part[1]
+    elif part[0] == "address":
+        return "[0x%x]" % part[1]
+    elif part[0] == "lit+reg":
+        return "[0x%x+%s]" % part[1]
+    elif part[0] == "regval":
+        return "[%s]" % part[1]
+    elif part[0] == "newline":
+        return "\n"
+    else:
+        return "0x%x" % part[1]
 
 # Join all of the instruction parts into a pretty string
 def djoin(parts):
-    parts = list(parts)
-    return " ".join([parts[0][1], ", ".join(clean(parts[1:]))])
+    expect_op = True
+    s = ""
+    for part in parts:
+        if part[0] == "newline":
+            expect_op = True
+            s = s[:-2]
+            s += "\n"
+        elif expect_op:
+            s += pretty(part)+" "
+            expect_op = False
+        else:
+            s += pretty(part)+", "
+    return s[:-1]
 
-# A Parser parses one instruction (for now)
+# A Parser parses a DCPU-16 program byte array into a stream of
+# (type, value) entities
 class Parser(object):
     def __init__(self, inst):
         self.inst = inst
@@ -126,17 +135,17 @@ class Parser(object):
             yield ("op", op)
             if not skip:             
                 val = (0x03f0 & first_inst) >> 4
-                print "%x" % val
+                #print "%x" % val
                 yield self.lookup_value(val)
             val2 = (0xfc00 & first_inst) >> 10
-            print "%x" % val2
+            #print "%x" % val2
             yield self.lookup_value(val2)
             yield ("newline", "\n")
             self.word += 1
 
 # ignore me
 def log(x):
-    print x
+    #print x
     return x
 
 # return a pretty string decomposition of the given program instruction
