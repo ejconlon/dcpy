@@ -17,7 +17,7 @@ REGISTERS = "A B C X Y Z I J".split(" ")
 REGLOOKUP = make_lookup(REGISTERS)
 
 # A test table of [(instruction, expected output)]
-decomp_cases = [
+decompilation_cases = [
     [[0x7c01, 0x0030], "SET A, 0x30"],
     [[0x7de1, 0x1000, 0x0020], "SET [0x1000], 0x20"],
     [[0x7803, 0x1000], "SUB A, [0x1000]"],
@@ -52,8 +52,8 @@ decomp_cases = [
     [[0x0010, 0x0010], "JSR A\nJSR A"]
 ]
 
-# Pretty-format the list of instruction parts
 def pretty(part):
+    """ Pretty-format a typed token """
     if part[0] in set(["regname", "popname", "pcname", "peekname", "pushname", "spname", "oname", "op"]):
         return part[1]
     elif part[0] == "address":
@@ -67,8 +67,8 @@ def pretty(part):
     else:
         return "0x%x" % part[1]
 
-# Join all of the instruction parts into a pretty string
-def djoin(parts):
+def print_typed_tokens(parts):
+    """ Join a stream of typed tokens into a pretty string """
     expect_op = True
     s = ""
     for part in parts:
@@ -83,50 +83,44 @@ def djoin(parts):
             s += pretty(part)+", "
     return s[:-1]
 
-# A Parser parses a DCPU-16 program byte array into a stream of
-# (type, value) entities
-class Parser(object):
-    def __init__(self, inst):
-        self.inst = inst
-        self.word = 0
+def lookup_value(val, iterator):
+    """ lookup may involve consuming the next word from the byte stream
+        returns pair of (token type, token value) """
+    if 0x0 <= val <= 0x7:
+        return ("regname", REGLOOKUP[val])
+    elif 0x08 <= val <= 0x0f:
+        return ("regval", REGLOOKUP[val - 0x08])
+    elif 0x10 <= val <= 0x17:
+        return ("lit+reg", (iterator.next(), REGLOOKUP[val - 0x10]))
+    elif val == 0x18:
+        return ("popname", "POP")
+    elif val == 0x19:
+        return ("peekname", "PEEK")
+    elif val == 0x1a:
+        return ("pushname", "PUSH")
+    elif val == 0x1b:
+        return ("spname", "SP")
+    elif val == 0x1c:
+        return ("pcname", "PC")
+    elif val == 0x1d:
+        return ("oname", "O")
+    elif val == 0x1e:
+        return ("address", iterator.next())
+    elif val == 0x1f:
+        return ("literal", iterator.next())
+    elif 0x20 <= val <= 0x3f:
+        return ("literal", val - 0x20);
+    else:
+        raise Exception("NI: 0x%x" % val)
 
-    # lookup involves some state change (advancing word index).
-    # returns pair of (token type, token value)
-    def lookup_value(self, val):
-        if 0x0 <= val <= 0x7:
-            return ("regname", REGLOOKUP[val])
-        elif 0x08 <= val <= 0x0f:
-            return ("regval", REGLOOKUP[val - 0x08])
-        elif 0x10 <= val <= 0x17:
-            self.word += 1
-            return ("lit+reg", (self.inst[self.word], REGLOOKUP[val - 0x10]))
-        elif val == 0x18:
-            return ("popname", "POP")
-        elif val == 0x19:
-            return ("peekname", "PEEK")
-        elif val == 0x1a:
-            return ("pushname", "PUSH")
-        elif val == 0x1b:
-            return ("spname", "SP")
-        elif val == 0x1c:
-            return ("pcname", "PC")
-        elif val == 0x1d:
-            return ("oname", "O")
-        elif val == 0x1e:
-            self.word += 1
-            return ("address", self.inst[self.word])
-        elif val == 0x1f:
-            self.word += 1
-            return ("literal", self.inst[self.word])
-        elif 0x20 <= val <= 0x3f:
-            return ("literal", val - 0x20);
-        else:
-            raise Exception("NI: 0x%x" % val)
-    
-    # yields all the typed tokens of a stream of instructions
-    def parse(self):
-        while self.word < len(self.inst):
-            first_inst = self.inst[self.word]
+def decompile(iterator):
+    """ decompile parses a DCPU-16 program byte array into a stream of
+        (type, value) entities
+        yields all the typed tokens of a stream of instructions """
+    iterator = iter(iterator)
+    try:
+        while True:
+            first_inst = iterator.next()
             op = OPLOOKUP[0x000f & first_inst]
             skip = False
             if op == "NON":
@@ -136,29 +130,33 @@ class Parser(object):
             if not skip:             
                 val = (0x03f0 & first_inst) >> 4
                 #print "%x" % val
-                yield self.lookup_value(val)
+                yield lookup_value(val, iterator)
             val2 = (0xfc00 & first_inst) >> 10
             #print "%x" % val2
-            yield self.lookup_value(val2)
+            yield lookup_value(val2, iterator)
             yield ("newline", "\n")
-            self.word += 1
+    except StopIteration:
+        pass
 
-# ignore me
 def log(x):
+    """ ignore me """
     #print x
     return x
 
-# return a pretty string decomposition of the given program instruction
-def decomp_inst(inst):
-    return djoin(log(i) for i in Parser(inst).parse())
+def decompile_instructions(insts):
+    """ return a pretty string decomposition of the given program byte array """
+    return print_typed_tokens(log(i) for i in decompile(insts))
 
-# run our test cases
-def test_decomp():
-    for case in decomp_cases:
-        inst, res = case
-        decomp = decomp_inst(inst)
-        print case, decomp
-        assert res == decomp
+def test_decompilation():
+    """ run our test cases """
+    for case in decompilation_cases:
+        instructions, expected = case
+        actual = decompile_instructions(instructions)
+        print "--------"
+        print "PROGRAM ", instructions
+        print "EXPECTED", expected
+        print "ACTUAL  ", actual
+        assert expected == actual
 
 if __name__ == "__main__":
-    test_decomp()
+    test_decompilation()
