@@ -5,7 +5,8 @@ from dcpy import *
 parser_cases = [
     ["SET A, 0x30", [("opname", "SET"), ("regname", "A"), ("literal", 48)]],
     ["SUB X, [0x1000]", [("opname", "SUB"), ("regname", "X"), ("address", 0x1000)]],
-    ["SET [0x2000+I], [A]", [("opname", "SET"), ("lit+reg", (0x2000, "I")), ("regval", "A")]]
+    ["SET [0x2000+I], [A]", [("opname", "SET"), ("lit+reg", (0x2000, "I")), ("regval", "A")]],
+    ["JSR 0x28", [("opname", "JSR"), ("literal", 0x28)]]
 ]
 
 def to_int(token):
