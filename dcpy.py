@@ -240,7 +240,6 @@ def test_compilation():
         print "ACTUAL  ", ["0x%x" % x for x in actual]
         assert expected == actual
 
-
 if __name__ == "__main__":
     test_decompilation()
     test_compilation()
