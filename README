@@ -1,0 +1,11 @@
+DCPY
+
+Utilities for working with DCPU-16 source and executables (see 0x10c.com for the spec, or find it in this repo).
+Written in a LISP-ish impurely functional mode of Python.
+
+PROJECT STATUS:
+
+assembler.py [asm] [exe] - assembles a given source file
+disassembler.py [exe] - prints a disassembled (textual) version of an executable
+
+Emulator soon to come.
