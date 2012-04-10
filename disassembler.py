@@ -146,5 +146,10 @@ def test_decompilation():
         assert expected == actual
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as f:
+            print decompile_instructions(f.readlines())
+            sys.exit()
     test_decompilation()
 

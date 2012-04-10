@@ -54,7 +54,7 @@ def compile_ir(ir):
                             b |= 0x1f << pos
                             next_words.append(t[1])
                     else:
-                        raise Exception("NI: "+str(t))
+                        raise Exception("Invalid token: "+str(t))
                     pos += 6
                 yield b
                 for w in next_words:
@@ -63,23 +63,29 @@ def compile_ir(ir):
                 pos = 0
                 next_words = []
             elif t[0] != 'newline':
-                raise Exception("NI: "+str(t))
+                raise Exception("Unexpected token: "+str(t))
     except StopIteration:
         pass
 
-from disassembler import decompilation_cases, decompile
+from disassembler import decompilation_cases
+from parser import parse
 
 def test_compilation():
     """ run our test cases """
     for case in decompilation_cases:
         expected, source = case
-        ir = decompile(expected)
-        actual = list(compile_ir(ir))
         print "--------"
         print "SOURCE", source
         print "EXPECTED", ["0x%x" % x for x in expected]
+        ir = parse(source.split("\n"))
+        actual = list(compile_ir(ir))
         print "ACTUAL  ", ["0x%x" % x for x in actual]
         assert expected == actual
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as f:
+            print list(compile_ir(parse(f.readlines())))
+            sys.exit()
     test_compilation()

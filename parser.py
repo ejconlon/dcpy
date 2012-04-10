@@ -3,19 +3,19 @@
 from dcpy import *
 
 parser_cases = [
-    ["SET A, 0x30", [("opname", "SET"), ("regname", "A"), ("literal", 48), ("newline", "\n")]],
-    ["SUB X, [0x1000]", [("opname", "SUB"), ("regname", "X"), ("address", 0x1000), ("newline", "\n")]],
-    ["SET [0x2000+I], [A]", [("opname", "SET"), ("lit+reg", (0x2000, "I")), ("regval", "A"), ("newline", "\n")]],
-    ["JSR 0x28", [("opname", "JSR"), ("literal", 0x28), ("newline", "\n")]],
-    ["SET POP, POP", [("opname", "SET"), ("popname", "POP"), ("popname", "POP"), ("newline", "\n")]],
-    ["SET PEEK, PEEK", [("opname", "SET"), ("peekname", "PEEK"), ("peekname", "PEEK"), ("newline", "\n")]],
-    ["SET PUSH, PUSH", [("opname", "SET"), ("pushname", "PUSH"), ("pushname", "PUSH"), ("newline", "\n")]],
-    ["SET SP, SP", [("opname", "SET"), ("spname", "SP"), ("spname", "SP"), ("newline", "\n")]],
-    ["SET PC, PC", [("opname", "SET"), ("pcname", "PC"), ("pcname", "PC"), ("newline", "\n")]],
-    ["SET O, O", [("opname", "SET"), ("oname", "O"), ("oname", "O"), ("newline", "\n")]],
-    ["JSR A\nJSR A", [("opname", "JSR"), ("regname", "A"), ("newline", "\n"),
-                      ("opname", "JSR"), ("regname", "A"), ("newline", "\n")]],
-    [":stop JSR stop", [("label", "stop"), ("opname", "JSR"), ("label", "stop"), ("newline", "\n")]],
+    ["SET A, 0x30", [("op", "SET"), ("regname", "A"), ("literal", 48), ("newline", "\n")]],
+    ["SUB X, [0x1000]", [("op", "SUB"), ("regname", "X"), ("address", 0x1000), ("newline", "\n")]],
+    ["SET [0x2000+I], [A]", [("op", "SET"), ("lit+reg", (0x2000, "I")), ("regval", "A"), ("newline", "\n")]],
+    ["JSR 0x28", [("op", "JSR"), ("literal", 0x28), ("newline", "\n")]],
+    ["SET POP, POP", [("op", "SET"), ("popname", "POP"), ("popname", "POP"), ("newline", "\n")]],
+    ["SET PEEK, PEEK", [("op", "SET"), ("peekname", "PEEK"), ("peekname", "PEEK"), ("newline", "\n")]],
+    ["SET PUSH, PUSH", [("op", "SET"), ("pushname", "PUSH"), ("pushname", "PUSH"), ("newline", "\n")]],
+    ["SET SP, SP", [("op", "SET"), ("spname", "SP"), ("spname", "SP"), ("newline", "\n")]],
+    ["SET PC, PC", [("op", "SET"), ("pcname", "PC"), ("pcname", "PC"), ("newline", "\n")]],
+    ["SET O, O", [("op", "SET"), ("oname", "O"), ("oname", "O"), ("newline", "\n")]],
+    ["JSR A\nJSR A", [("op", "JSR"), ("regname", "A"), ("newline", "\n"),
+                      ("op", "JSR"), ("regname", "A"), ("newline", "\n")]],
+    [":stop JSR stop", [("label", "stop"), ("op", "JSR"), ("label", "stop"), ("newline", "\n")]],
     ["; comment SET X, asdf", [("comment", "; comment SET X, asdf"), ("newline", "\n")]]
 ]
 
@@ -38,7 +38,7 @@ def parse(source):
                 yield ("comment", line[line.index(';'):])
                 break
             elif token in REVERSE_OPLOOKUP.keys() or token in REVERSE_NONOPLOOKUP.keys():
-                yield ("opname", token)
+                yield ("op", token)
             elif token in REVERSE_REGLOOKUP.keys():
                 yield ("regname", token)
             elif token == "POP":
