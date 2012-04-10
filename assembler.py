@@ -1,8 +1,40 @@
 #!/usr/bin/env python
 
+import struct
 from common import *
 
-def compile_ir(ir):
+complete_cases = [
+    ["SET A, 0x30", [0x7c01, 0x0030], [("op", "SET", 0), ("regname", "A", 0), ("literal", 48, 1), ("newline", "\n", 1)]]
+]
+
+def calculate_label_offsets(ir):
+    offsets = {}
+    skews = []
+    saw_newline = True
+    for item in ir:
+        if item[0] == "label":
+            if saw_newline:
+                offsets[item[1]] = item[2]
+            else:
+                skews.append(item[2])
+        if item[0] == "newline":
+            saw_newline = True
+        else:
+            saw_newline = False
+    for key in offsets.iterkeys():
+        skew = 0
+        val = offsets[key]
+        for pos in skews:
+            if pos < val:
+                skew += 1
+            else:
+                break
+        offsets[key] += skew
+    for pair in offsets.iteritems():
+        print pair[0], "0x%x" % pair[1]
+    return offsets
+
+def compile_ir(ir, label_offsets):
     """ compiles IR (list of typed tokens) to a yielded stream of bytes """
     ir = iter(ir)
     b = 0x0000;
@@ -53,6 +85,9 @@ def compile_ir(ir):
                         else:
                             b |= 0x1f << pos
                             next_words.append(t[1])
+                    elif t[0] == 'label':
+                        b |= 0x1f << pos
+                        next_words.append(label_offsets[t[1]])
                     else:
                         raise Exception("Invalid token: "+str(t))
                     pos += 6
@@ -62,7 +97,7 @@ def compile_ir(ir):
                 b = 0x0000
                 pos = 0
                 next_words = []
-            elif t[0] != "newline" and t[0] != "comment":
+            elif t[0] not in set(["newline", "comment", "label"]):
                 raise Exception("Unexpected token: "+str(t))
     except StopIteration:
         pass
@@ -77,8 +112,9 @@ def test_compilation():
         print "--------"
         print "SOURCE", source
         print "EXPECTED", ["0x%x" % x for x in expected]
-        ir = parse(source.split("\n"))
-        actual = list(compile_ir(ir))
+        ir = list(parse(source.split("\n")))
+        label_offsets = calculate_label_offsets(ir)
+        actual = list(compile_ir(ir, label_offsets))
         print "ACTUAL  ", ["0x%x" % x for x in actual]
         assert expected == actual
 
@@ -86,6 +122,14 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
         with open(sys.argv[1]) as f:
-            print list(compile_ir(parse(f.readlines())))
+            ir = list(parse(f.readlines()))
+            label_offsets = calculate_label_offsets(ir)
+            program = list(compile_ir(ir, label_offsets))
+            print ["0x%x" % x for x in program]
+            if len(sys.argv) > 2:
+                with open(sys.argv[2], 'wb') as g:
+                    for word in program:
+                        packed = struct.pack('>H', word)
+                        g.write(packed)
             sys.exit()
     test_compilation()

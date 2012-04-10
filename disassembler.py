@@ -71,33 +71,33 @@ def pretty_join_typed_tokens(parts):
             s += pretty_one(part)+", "
     return s[:-1]
 
-def lookup_value(val, iterator):
+def lookup_value(val, iterator, offset):
     """ lookup may involve consuming the next word from the byte stream
         returns pair of (token type, token value) """
     if 0x0 <= val <= 0x7:
-        return ("regname", REGLOOKUP[val])
+        return ("regname", REGLOOKUP[val], offset)
     elif 0x08 <= val <= 0x0f:
-        return ("regval", REGLOOKUP[val - 0x08])
+        return ("regval", REGLOOKUP[val - 0x08], offset)
     elif 0x10 <= val <= 0x17:
-        return ("lit+reg", (iterator.next(), REGLOOKUP[val - 0x10]))
+        return ("lit+reg", (iterator.next(), REGLOOKUP[val - 0x10]), offset + 1)
     elif val == 0x18:
-        return ("popname", "POP")
+        return ("popname", "POP", offset)
     elif val == 0x19:
-        return ("peekname", "PEEK")
+        return ("peekname", "PEEK", offset)
     elif val == 0x1a:
-        return ("pushname", "PUSH")
+        return ("pushname", "PUSH", offset)
     elif val == 0x1b:
-        return ("spname", "SP")
+        return ("spname", "SP", offset)
     elif val == 0x1c:
-        return ("pcname", "PC")
+        return ("pcname", "PC", offset)
     elif val == 0x1d:
-        return ("oname", "O")
+        return ("oname", "O", offset)
     elif val == 0x1e:
-        return ("address", iterator.next())
+        return ("address", iterator.next(), offset + 1)
     elif val == 0x1f:
-        return ("literal", iterator.next())
+        return ("literal", iterator.next(), offset + 1)
     elif 0x20 <= val <= 0x3f:
-        return ("literal", val - 0x20);
+        return ("literal", val - 0x20, offset)
     else:
         raise Exception("NI: 0x%x" % val)
 
@@ -106,6 +106,7 @@ def decompile(iterator):
         (type, value) entities
         yields all the typed tokens of a stream of instructions """
     iterator = iter(iterator)
+    offset = 0
     try:
         while True:
             first_inst = iterator.next()
@@ -114,15 +115,20 @@ def decompile(iterator):
             if op == "NON":
                 skip = True
                 op = NONOPLOOKUP[(0x03f0 & first_inst) >> 4]
-            yield ("op", op)
+            yield ("op", op, offset)
             if not skip:             
                 val = (0x03f0 & first_inst) >> 4
                 #print "%x" % val
-                yield lookup_value(val, iterator)
+                tup = lookup_value(val, iterator, offset)
+                offset = tup[2]
+                yield tup
             val2 = (0xfc00 & first_inst) >> 10
             #print "%x" % val2
-            yield lookup_value(val2, iterator)
-            yield ("newline", "\n")
+            tup = lookup_value(val2, iterator, offset)
+            offset = tup[2]
+            yield tup
+            yield ("newline", "\n", offset)
+            offset += 1
     except StopIteration:
         pass
 
