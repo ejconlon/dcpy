@@ -1,24 +1,8 @@
 #!/usr/bin/env python
 
+from common import *
+
 # A simple disassembler for DCPU-16 programs.
-
-make_lookup = lambda d: dict((i, d[i]) for i in xrange(len(d)))
-make_reverse_lookup = lambda d: dict((d[i], i) for i in xrange(len(d)))
-
-OPCODES = "NON SET ADD SUB MUL DIV MOD SHL SHR AND BOR XOR IFE IFN IFG IFB".split(" ")
-
-OPLOOKUP = make_lookup(OPCODES)
-REVERSE_OPLOOKUP = make_reverse_lookup(OPCODES)
-
-NONOPCODES = "RES JSR".split(" ")
-
-NONOPLOOKUP = make_lookup(NONOPCODES)
-REVERSE_NONOPLOOKUP = make_reverse_lookup(NONOPCODES)
-
-REGISTERS = "A B C X Y Z I J".split(" ")
-
-REGLOOKUP = make_lookup(REGISTERS)
-REVERSE_REGLOOKUP = make_reverse_lookup(REGISTERS)
 
 # A test table of [(instruction, expected output)]
 decompilation_cases = [
@@ -55,7 +39,7 @@ decompilation_cases = [
     [[0x0010, 0x0010], "JSR A\nJSR A"]
 ]
 
-def pretty(part):
+def pretty_one(part):
     """ Pretty-format a typed token """
     if part[0] in set(["regname", "popname", "pcname", "peekname", "pushname", "spname", "oname", "op"]):
         return part[1]
@@ -70,7 +54,7 @@ def pretty(part):
     else:
         return "0x%x" % part[1]
 
-def print_typed_tokens(parts):
+def pretty_join_typed_tokens(parts):
     """ Join a stream of typed tokens into a pretty string """
     expect_op = True
     s = ""
@@ -80,10 +64,10 @@ def print_typed_tokens(parts):
             s = s[:-2]
             s += "\n"
         elif expect_op:
-            s += pretty(part)+" "
+            s += pretty_one(part)+" "
             expect_op = False
         else:
-            s += pretty(part)+", "
+            s += pretty_one(part)+", "
     return s[:-1]
 
 def lookup_value(val, iterator):
@@ -148,7 +132,7 @@ def log(x):
 
 def decompile_instructions(insts):
     """ return a pretty string decomposition of the given program byte array """
-    return print_typed_tokens(log(i) for i in decompile(insts))
+    return pretty_join_typed_tokens(log(i) for i in decompile(insts))
 
 def test_decompilation():
     """ run our test cases """
@@ -161,85 +145,6 @@ def test_decompilation():
         print "ACTUAL  ", actual
         assert expected == actual
 
-def compile(ir):
-    ir = iter(ir)
-    b = 0x0000;
-    pos = 0
-    next_words = []
-    try:
-        while True:
-            t = ir.next()
-            print t
-            if t[0] == 'op':
-                assert pos == 0
-                num_args = 2
-                if t[1] != "JSR":
-                    b |= 0x00f & REVERSE_OPLOOKUP[t[1]]
-                    pos += 4
-                else:
-                    b |= (0x03f & REVERSE_NONOPLOOKUP[t[1]]) << 4
-                    pos += 10
-                    num_args = 1
-                for i in xrange(num_args):
-                    t = ir.next()
-                    print t
-                    if t[0] == 'regname':
-                        b |= (0x003f & REVERSE_REGLOOKUP[t[1]]) << pos
-                    elif t[0] == 'regval':
-                        b |= (0x003f & (REVERSE_REGLOOKUP[t[1]] + 0x8)) << pos                      
-                    elif t[0] == 'lit+reg':
-                        b |= (0x003f & (REVERSE_REGLOOKUP[t[1][1]] + 0x10)) << pos
-                        next_words.append(t[1][0])
-                    elif t[0] == 'popname':
-                        b |= 0x18 << pos
-                    elif t[0] == 'peekname':
-                        b |= 0x19 << pos
-                    elif t[0] == 'pushname':
-                        b |= 0x1a << pos
-                    elif t[0] == 'spname':
-                        b |= 0x1b << pos
-                    elif t[0] == 'pcname':
-                        b |= 0x1c << pos
-                    elif t[0] == 'oname':
-                        b |= 0x1d << pos
-                    elif t[0] == 'address':
-                        b |= 0x1e << pos
-                        next_words.append(t[1])
-                    elif t[0] == 'literal':
-                        if t[1] <= 0x1f:
-                            b |= (0x003f & (t[1] + 0x20)) << pos
-                        else:
-                            b |= 0x1f << pos
-                            next_words.append(t[1])
-                    else:
-                        raise Exception("NI: "+str(t))
-                    pos += 6
-                yield b
-                for w in next_words:
-                    yield w
-                b = 0x0000
-                pos = 0
-                next_words = []
-            elif t[0] != 'newline':
-                raise Exception("NI: "+str(t))
-    except StopIteration:
-        pass
-
-def compile_to_list(ir):
-    return list(compile(ir))
-
-def test_compilation():
-    """ run our test cases """
-    for case in decompilation_cases:
-        expected, source = case
-        ir = decompile(expected)
-        actual = compile_to_list(ir)
-        print "--------"
-        print "SOURCE", source
-        print "EXPECTED", ["0x%x" % x for x in expected]
-        print "ACTUAL  ", ["0x%x" % x for x in actual]
-        assert expected == actual
-
 if __name__ == "__main__":
     test_decompilation()
-    test_compilation()
+
