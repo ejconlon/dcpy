@@ -14,7 +14,9 @@ parser_cases = [
     ["SET PC, PC", [("opname", "SET"), ("pcname", "PC"), ("pcname", "PC"), ("newline", "\n")]],
     ["SET O, O", [("opname", "SET"), ("oname", "O"), ("oname", "O"), ("newline", "\n")]],
     ["JSR A\nJSR A", [("opname", "JSR"), ("regname", "A"), ("newline", "\n"),
-                      ("opname", "JSR"), ("regname", "A"), ("newline", "\n")]]
+                      ("opname", "JSR"), ("regname", "A"), ("newline", "\n")]],
+    [":stop JSR stop", [("label", "stop"), ("opname", "JSR"), ("label", "stop"), ("newline", "\n")]],
+    ["; comment SET X, asdf", [("comment", "; comment SET X, asdf"), ("newline", "\n")]]
 ]
 
 def to_int(token):
@@ -24,27 +26,33 @@ def to_int(token):
         return int(token)
 
 def parse(source):
-    parts = []
-    for line in source.split("\n"):
-        for token in line.split(" "):
+    for line in source:
+        for token in line.strip().split(" "):
+            if len(token) == 0:
+                continue
             if token[-1] == ',': token = token[:-1]
-            print token
-            if token in REVERSE_OPLOOKUP.keys() or token in REVERSE_NONOPLOOKUP.keys():
-                parts.append(("opname", token))
+            #print "TOKEN", token
+            if token[0] == ':':
+                yield ("label", token[1:])
+            elif token[0] == ';':
+                yield ("comment", line[line.index(';'):])
+                break
+            elif token in REVERSE_OPLOOKUP.keys() or token in REVERSE_NONOPLOOKUP.keys():
+                yield ("opname", token)
             elif token in REVERSE_REGLOOKUP.keys():
-                parts.append(("regname", token))
+                yield ("regname", token)
             elif token == "POP":
-                parts.append(("popname", "POP"))
+                yield ("popname", "POP")
             elif token == "PEEK":
-                parts.append(("peekname", "PEEK"))
+                yield ("peekname", "PEEK")
             elif token == "PUSH":
-                parts.append(("pushname", "PUSH"))
+                yield ("pushname", "PUSH")
             elif token == "SP":
-                parts.append(("spname", "SP"))
+                yield ("spname", "SP")
             elif token == "PC":
-                parts.append(("pcname", "PC"))
+                yield ("pcname", "PC")
             elif token == "O":
-                parts.append(("oname", "O"))
+                yield ("oname", "O")
             elif token.startswith("[") and token.endswith("]"):
                 token = token[1:-1]
                 if "+" in token:
@@ -56,20 +64,21 @@ def parse(source):
                             break
                         regindex += 1
                     assert regindex < 2
-                    parts.append(("lit+reg", (to_int(sub[1-regindex]), sub[regindex])))
+                    yield ("lit+reg", (to_int(sub[1-regindex]), sub[regindex]))
                 elif token in REVERSE_REGLOOKUP.keys():
-                    parts.append(("regval", token))
+                    yield ("regval", token)
                 else:
-                    parts.append(("address", to_int(token)))
+                    yield ("address", to_int(token))
+            elif token[0].isalpha():
+                yield ("label", token)
             else:
-                parts.append(("literal", to_int(token)))
-        parts.append(("newline", "\n"))
-    return parts
+                yield ("literal", to_int(token))
+        yield ("newline", "\n")
 
 def test_parser():
     for case in parser_cases:
         source, expected = case
-        actual = parse(source)
+        actual = list(parse(source.split("\n")))
         print "--------"
         print "SOURCE", source
         print "EXPECTED", expected
@@ -77,4 +86,9 @@ def test_parser():
         assert expected == actual
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as f:
+            print list(parse(f.readlines()))
+            sys.exit()
     test_parser()
