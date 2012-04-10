@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import struct
 from common import *
 
 # A simple disassembler for DCPU-16 programs.
@@ -145,11 +146,17 @@ def test_decompilation():
         print "ACTUAL  ", actual
         assert expected == actual
 
+def read_words(f):
+    word = f.read(2)
+    while word != "":
+        yield struct.unpack('>H', word)[0]
+        word = f.read(2)
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
-        with open(sys.argv[1]) as f:
-            print decompile_instructions(f.readlines())
+        with open(sys.argv[1], 'rb') as f:
+            print decompile_instructions(read_words(f))
             sys.exit()
     test_decompilation()
 

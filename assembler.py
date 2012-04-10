@@ -62,7 +62,7 @@ def compile_ir(ir):
                 b = 0x0000
                 pos = 0
                 next_words = []
-            elif t[0] != 'newline':
+            elif t[0] != "newline" and t[0] != "comment":
                 raise Exception("Unexpected token: "+str(t))
     except StopIteration:
         pass
