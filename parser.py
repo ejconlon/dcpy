@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from dcpy import *
+from itertools import imap
 
 parser_cases = [
     ["SET A, 0x30", [("op", "SET", 0), ("regname", "A", 0), ("literal", 48, 1), ("newline", "\n", 1)]],
@@ -36,7 +37,7 @@ def parse(source):
             if len(token) == 0:
                 continue
             if token[-1] == ',': token = token[:-1]
-            #print "TOKEN", token
+            print "TOKEN", token
             if token[0] == ':':
                 yield ("label", token[1:], offset)
             elif token[0] == ';':
@@ -77,6 +78,16 @@ def parse(source):
                 else:
                     offset += 1
                     yield ("address", to_int(token), offset)
+            elif token == "DAT":
+                data = []
+                for subtoken in imap(lambda x: x.strip(), line[line.index("DAT ")+4:].split(',')):
+                    if subtoken[0] == subtoken[-1] == '"':
+                        for x in subtoken[1:-1]: data.append(ord(x))
+                    else:
+                        data.append(to_int(subtoken))
+                offset += len(data)
+                yield ("data", data, offset)
+                break
             elif token[0].isalpha():
                 yield ("label", token, offset)
             else:

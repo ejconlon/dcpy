@@ -52,6 +52,8 @@ def pretty_one(part):
         return "[%s]" % part[1]
     elif part[0] == "newline":
         return "\n"
+    elif part[0] == "data":
+        return ", ".join("0x%x" % x for x in part[1])
     else:
         return "0x%x" % part[1]
 
@@ -64,6 +66,9 @@ def pretty_join_typed_tokens(parts):
             expect_op = True
             s = s[:-2]
             s += "\n"
+        elif part[0] == "data":
+            expect_op = True
+            s += "DAT "+pretty_one(part)+"\n"
         elif expect_op:
             s += pretty_one(part)+" "
             expect_op = False
@@ -114,7 +119,12 @@ def decompile(iterator):
             skip = False
             if op == "NON":
                 skip = True
-                op = NONOPLOOKUP[(0x03f0 & first_inst) >> 4]
+                try:
+                    op = NONOPLOOKUP[(0x03f0 & first_inst) >> 4]
+                except KeyError:
+                    offset += 1
+                    yield ("data", [first_inst], offset)
+                    continue
             yield ("op", op, offset)
             if not skip:             
                 val = (0x03f0 & first_inst) >> 4

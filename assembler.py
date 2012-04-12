@@ -94,6 +94,9 @@ def compile_ir(ir):
                 b = 0x0000
                 pos = 0
                 next_words = []
+            elif t[0] == "data":
+                for d in t[1]:
+                    yield d
             elif t[0] not in set(["newline", "comment", "label"]):
                 raise Exception("Unexpected token: "+str(t))
     except StopIteration:
