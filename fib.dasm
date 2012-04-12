@@ -78,5 +78,4 @@ SET PC, POP
 SET PC, POP
 
 
-:crash SET [0x1000], 0xfff0
-SET PC, 0x1000
+:crash SET PC, crash
