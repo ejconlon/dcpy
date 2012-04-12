@@ -3,10 +3,6 @@
 import struct
 from common import *
 
-complete_cases = [
-    ["SET A, 0x30", [0x7c01, 0x0030], [("op", "SET", 0), ("regname", "A", 0), ("literal", 48, 1), ("newline", "\n", 1)]]
-]
-
 def calculate_label_offsets(ir):
     offsets = {}
     skews = []
@@ -30,12 +26,13 @@ def calculate_label_offsets(ir):
             else:
                 break
         offsets[key] += skew
-    for pair in offsets.iteritems():
-        print pair[0], "0x%x" % pair[1]
+    #for pair in offsets.iteritems():
+    #    print pair[0], "0x%x" % pair[1]
     return offsets
 
-def compile_ir(ir, label_offsets):
+def compile_ir(ir):
     """ compiles IR (list of typed tokens) to a yielded stream of bytes """
+    label_offsets = calculate_label_offsets(ir)
     ir = iter(ir)
     b = 0x0000;
     pos = 0
@@ -102,6 +99,10 @@ def compile_ir(ir, label_offsets):
     except StopIteration:
         pass
 
+def assemble(source):
+    ir = list(parse(source))
+    return compile_ir(ir)
+
 from disassembler import decompilation_cases
 from parser import parse
 
@@ -112,9 +113,7 @@ def test_compilation():
         print "--------"
         print "SOURCE", source
         print "EXPECTED", ["0x%x" % x for x in expected]
-        ir = list(parse(source.split("\n")))
-        label_offsets = calculate_label_offsets(ir)
-        actual = list(compile_ir(ir, label_offsets))
+        actual = list(assemble(source.split("\n")))
         print "ACTUAL  ", ["0x%x" % x for x in actual]
         assert expected == actual
 
@@ -122,9 +121,7 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
         with open(sys.argv[1]) as f:
-            ir = list(parse(f.readlines()))
-            label_offsets = calculate_label_offsets(ir)
-            program = list(compile_ir(ir, label_offsets))
+            program = list(assemble(f.readlines()))
             print ["0x%x" % x for x in program]
             if len(sys.argv) > 2:
                 with open(sys.argv[2], 'wb') as g:

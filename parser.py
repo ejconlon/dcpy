@@ -19,6 +19,7 @@ parser_cases = [
     [":stop JSR stop", [("label", "stop", 0), ("op", "JSR", 0), ("label", "stop", 0), ("newline", "\n", 0)]],
     ["; comment SET X, asdf\n; another", [("comment", "; comment SET X, asdf", 0), ("newline", "\n", 0),
                                           ("comment", "; another", 0), ("newline", "\n", 0)]]
+    #["DAT \"hello, world!\", 0", [("data", [ord(c) for c in "hello, world!"] + [0])]]
 ]
 
 def to_int(token):
