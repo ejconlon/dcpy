@@ -37,7 +37,9 @@ decompilation_cases = [
     [[0x7df1, 0xffff, 0x0020], "SET 0xffff, 0x20"],
     [[0x0010], "JSR A"],
     [[0x7c10, 0x0020], "JSR 0x20"],
-    [[0x0010, 0x0010], "JSR A\nJSR A"]
+    [[0x0010, 0x0010], "JSR A\nJSR A"],
+    [[0x6051], "SET Z, POP"],
+    [[0x6031], "SET X, POP"]
 ]
 
 def pretty_one(part):

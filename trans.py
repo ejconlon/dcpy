@@ -13,7 +13,7 @@ SET PC, Z
 :start SET PUSH, 2
 SET PUSH, 1
 JSR :op_ADD
-SET X, POP
+SET Z, POP
 :return SET PC, :return\
 """.split("\n"))
 ]
@@ -43,7 +43,7 @@ def translate(statement):
         yield prefix+"SET PUSH, "+statement[-i-1]
         prefix = ""
     yield "JSR "+label
-    yield "SET "+REG[0]+", POP"
+    yield "SET "+REG[-1]+", POP"
     yield ":return SET PC, :return"
     
 
