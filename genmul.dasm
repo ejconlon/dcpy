@@ -1,38 +1,32 @@
-SET PC, :start
-
-:op_MUL SET Z, POP
-SET X, POP
-SET Y, POP
-MUL X, Y
-SET PUSH, X
-SET PC, Z
-
-:op_ADD SET Z, POP
+SET PC, :start0
+:start_ADD SET Z, POP
 SET X, POP
 SET Y, POP
 ADD X, Y
 SET PUSH, X
-SET PC, Z
-
-:op_SUB SET Z, POP
+:return_ADD SET PC, Z
+:start_SUB SET Z, POP
 SET X, POP
 SET Y, POP
 SUB X, Y
 SET PUSH, X
-SET PC, Z
-
-:start 
-SET PUSH, 2
-SET PUSH, 1
-JSR :op_ADD
-SET PUSH, 3
-SET PUSH, 5
-JSR :op_SUB
+:return_SUB SET PC, Z
+:start_MUL SET Z, POP
+SET X, POP
 SET Y, POP
+MUL X, Y
+SET PUSH, X
+:return_MUL SET PC, Z
+:start0 SET PUSH, 2
+SET PUSH, 1
+JSR :start_ADD
+:start1 SET PUSH, 3
+SET PUSH, 5
+JSR :start_SUB
+:start2 SET Y, POP
 SET X, POP
 SET PUSH, Y
 SET PUSH, X
-JSR :op_MUL
-
+JSR :start_MUL
 SET X, POP
-:return SET PC, :return
+:return0 SET PC, :return0

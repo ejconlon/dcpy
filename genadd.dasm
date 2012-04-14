@@ -1,16 +1,12 @@
-SET PC, :start
-
-:op_ADD SET Z, POP
+SET PC, :start0
+:start_ADD SET Z, POP
 SET X, POP
 SET Y, POP
 ADD X, Y
 SET PUSH, X
-SET PC, Z
-
-:start SET PUSH, 2
+:return_ADD SET PC, Z
+:start0 SET PUSH, 2
 SET PUSH, 1
-JSR :op_ADD
-
+JSR :start_ADD
 SET X, POP
-
-:return SET PC, :return
+:return0 SET PC, :return0
