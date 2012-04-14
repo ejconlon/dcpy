@@ -1,0 +1,38 @@
+SET PC, :start
+
+:op_MUL SET Z, POP
+SET X, POP
+SET Y, POP
+MUL X, Y
+SET PUSH, X
+SET PC, Z
+
+:op_ADD SET Z, POP
+SET X, POP
+SET Y, POP
+ADD X, Y
+SET PUSH, X
+SET PC, Z
+
+:op_SUB SET Z, POP
+SET X, POP
+SET Y, POP
+SUB X, Y
+SET PUSH, X
+SET PC, Z
+
+:start 
+SET PUSH, 2
+SET PUSH, 1
+JSR :op_ADD
+SET PUSH, 3
+SET PUSH, 5
+JSR :op_SUB
+SET Y, POP
+SET X, POP
+SET PUSH, Y
+SET PUSH, X
+JSR :op_MUL
+
+SET X, POP
+:return SET PC, :return
