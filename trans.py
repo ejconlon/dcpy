@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 translate_cases = [
-#("(MUL (ADD 1 2) (SUB 5 3))", ""),
-
 ("(ADD 1 2)",
 """\
 SET PC, :start0
@@ -51,6 +49,46 @@ SET X, POP
 SET PUSH, Y
 SET PUSH, X
 JSR :start_MUL
+SET X, POP
+:return0 SET PC, :return0\
+""".split("\n"))
+
+,("(SUB (SUB 6 2) 3)",
+"""\
+SET PC, :start0
+:start_SUB SET Z, POP
+SET X, POP
+SET Y, POP
+SUB X, Y
+SET PUSH, X
+:return_SUB SET PC, Z
+:start0 SET PUSH, 2
+SET PUSH, 6
+JSR :start_SUB
+:start1 SET X, POP
+SET PUSH, 3
+SET PUSH, X
+JSR :start_SUB
+SET X, POP
+:return0 SET PC, :return0\
+""".split("\n"))
+
+,("(SUB 4 (SUB 5 2))",
+"""\
+SET PC, :start0
+:start_SUB SET Z, POP
+SET X, POP
+SET Y, POP
+SUB X, Y
+SET PUSH, X
+:return_SUB SET PC, Z
+:start0 SET PUSH, 2
+SET PUSH, 5
+JSR :start_SUB
+:start1 SET Y, POP
+SET PUSH, Y
+SET PUSH, 4
+JSR :start_SUB
 SET X, POP
 :return0 SET PC, :return0\
 """.split("\n"))
@@ -156,6 +194,7 @@ class TranslateVisitor(object):
         yield return_label+" SET PC, "+REG[-1]
 
     def translate_statement(self, op, args, start_label, swap_indices):
+        print op, args, start_label, swap_indices
         nargs = len(args)
         if nargs > len(REG)-1 or nargs == 0:
             raise Exception("Bad number of arguments: "+nargs)
@@ -165,11 +204,11 @@ class TranslateVisitor(object):
             for i in reversed(swap_indices):
                 yield prefix+"SET "+REG[i]+", POP"
                 prefix = ""
-        for i in xrange(nargs):
+        for i in reversed(xrange(nargs)):
             if i not in swap_indices:
-                yield prefix+"SET PUSH, "+args[-i-1]
+                yield prefix+"SET PUSH, "+args[i]
             else:
-                yield prefix+"SET PUSH, "+REG[nargs-i-1]
+                yield prefix+"SET PUSH, "+REG[i]
             prefix = ""
         yield "JSR "+op_start_label
 

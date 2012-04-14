@@ -1,0 +1,16 @@
+SET PC, :start0
+:start_SUB SET Z, POP
+SET X, POP
+SET Y, POP
+SUB X, Y
+SET PUSH, X
+:return_SUB SET PC, Z
+:start0 SET PUSH, 2
+SET PUSH, 5
+JSR :start_SUB
+:start1 SET Y, POP
+SET PUSH, Y
+SET PUSH, 4
+JSR :start_SUB
+SET X, POP
+:return0 SET PC, :return0
